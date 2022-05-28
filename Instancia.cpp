@@ -70,46 +70,7 @@ void Instancia::desenha()
 
     glPopMatrix();
 
-    glPushMatrix();
-        glColor3f(0.0f,0.0f,1.0f);
-        glPointSize(3.0f);
-        glBegin(GL_POINTS);
-            glVertex3f(posicaoPersonagem.x, posicaoPersonagem.y, 0.0f);
-        glEnd();
-    glPopMatrix();
-
-
-    glPushMatrix();
-        glColor3f(0.0f,0.0f,1.0f);
-        glPointSize(3.0f);
-        glBegin(GL_POINTS);
-            glVertex3f(envelope[0].x, envelope[0].y, 0.0f);
-        glEnd();
-    glPopMatrix();
-
-    glPushMatrix();
-        glColor3f(0.0f,0.0f,1.0f);
-        glPointSize(3.0f);
-        glBegin(GL_POINTS);
-            glVertex3f(envelope[1].x, envelope[1].y, 0.0f);
-        glEnd();
-    glPopMatrix();
-
-    glPushMatrix();
-        glColor3f(0.0f,0.0f,1.0f);
-        glPointSize(3.0f);
-        glBegin(GL_POINTS);
-            glVertex3f(envelope[2].x, envelope[2].y, 0.0f);
-        glEnd();
-    glPopMatrix();
-
-    glPushMatrix();
-        glColor3f(0.0f,0.0f,1.0f);
-        glPointSize(3.0f);
-        glBegin(GL_POINTS);
-            glVertex3f(envelope[3].x, envelope[3].y, 0.0f);
-        glEnd();
-    glPopMatrix();
+    
 }
 
 void Instancia :: ObtemPontos(){
@@ -171,5 +132,21 @@ void Instancia :: imprimeEnv(){
     envelope[1].imprime();  cout << endl;
     envelope[2].imprime();  cout << " <> " ;
     envelope[3].imprime();  cout << endl;
+}
+
+void Instancia :: DesenhaEnvelope(){
+    glPushMatrix();
+    glColor3f(1,0.65,0);
+    glBegin(GL_LINES);
+        glVertex2f(envelope[0].x,envelope[0].y);
+        glVertex2f(envelope[1].x,envelope[1].y);
+        glVertex2f(envelope[0].x,envelope[0].y);
+        glVertex2f(envelope[3].x,envelope[3].y);
+        glVertex2f(envelope[1].x,envelope[1].y);
+        glVertex2f(envelope[2].x,envelope[2].y);
+        glVertex2f(envelope[2].x,envelope[2].y);
+        glVertex2f(envelope[3].x,envelope[3].y);
+    glEnd();
+    glPopMatrix();
 }
 

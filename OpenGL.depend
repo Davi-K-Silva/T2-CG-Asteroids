@@ -476,10 +476,10 @@
 	"Poligono.h"
 	"Temporizador.h"
 
-1653679162 source:c:\users\davik\documents\pucrs\cg\t2-cg-asteroids\instancia.cpp
+1653774839 source:c:\users\davik\documents\pucrs\cg\t2-cg-asteroids\instancia.cpp
 	"Instancia.h"
 
-1653664255 c:\users\davik\documents\pucrs\cg\t2-cg-asteroids\instancia.h
+1653774123 c:\users\davik\documents\pucrs\cg\t2-cg-asteroids\instancia.h
 	<iostream>
 	"Poligono.h"
 	"Modelo.h"
@@ -538,7 +538,7 @@
 	<windows.h>
 	<sys/time.h>
 
-1653679070 source:c:\users\davik\documents\pucrs\cg\t2-cg-asteroids\modelagemdepersonagenscominstancia.cpp
+1653779089 source:c:\users\davik\documents\pucrs\cg\t2-cg-asteroids\modelagemdepersonagenscominstancia.cpp
 	<iostream>
 	<cmath>
 	<ctime>
@@ -548,6 +548,7 @@
 	<sys/time.h>
 	<GLUT/glut.h>
 	<glut.h>
+	<typeinfo>
 	"Ponto.h"
 	"Modelo.h"
 	"Instancia.h"
@@ -593,6 +594,6 @@
 	"Ponto.h"
 	<cmath>
 
-1653599375 source:c:\users\davik\documents\pucrs\cg\t2-cg-asteroids\bezier.cpp
+1653777291 source:c:\users\davik\documents\pucrs\cg\t2-cg-asteroids\bezier.cpp
 	"Bezier.h"
 

@@ -86,6 +86,7 @@ void Bezier::Traca()
     double DeltaT = 1.0/50;
     Ponto P;
     //cout << "DeltaT: " << DeltaT << endl;
+    glColor3f(0.3,1,0.3);
     glBegin(GL_LINE_STRIP);
 
     while(t<1.0)

@@ -36,6 +36,10 @@ using namespace std;
 #include <glut.h>
 #endif
 
+#include <typeinfo>
+
+
+#define _USE_MATH_DEFINES
 #define PI 3.14159265
 
 #include "Ponto.h"
@@ -45,12 +49,20 @@ using namespace std;
 
 #include "Temporizador.h"
 
-#define NAVESCOUNT 4
+#define NAVESCOUNT 5
+
 #define ENEMYSPEED 30
 #define PLAYERSPEED 0.85
-#define SHOTSPEED 20
-#define ROTACACAOSPEED 5
+#define SHOTSPEED 1.8
+#define ROTACACAO_SPEED 5
 #define TURNSIZE 10
+
+#define SIZE_Y_MAX 50
+#define SIZE_Y_MIN -50
+#define SIZE_X_MAX 50
+#define SIZE_X_MIN -50
+
+#define HURT_ANIMATION_TIME 0.15;
 
 Temporizador T;
 double AccumDeltaT=0;
@@ -66,24 +78,52 @@ Modelo Tiro;
 Modelo TiroInimigo;
 Modelo Vida;
 
+Modelo hurtPlayer;
+Modelo hurtEnemy1;
+Modelo hurtEnemy2;
+Modelo hurtEnemy3;
+Modelo tiroInimigoBoom;
+
+Modelo GameOverModel;
+Modelo winModel;
+
 Ponto dir = Ponto (0,1,0);
 int quantEnemyModels;
 vector <Modelo> modelos;
+vector <Modelo> hurtModelos;
 Instancia Universo[5000];
+
+Ponto Estrelas[200];
 
 // Limites l�gicos da �rea de desenho
 Ponto Min, Max;
 
+int playerHealth = 3;
+int positionHealth = 0;
+int positionShoot = 0;
+
 bool movePlayer = true;
 
-bool DesenhaBezier = true;
+bool DesenhaBezier = false;
+bool DesenhaEnvelope = false;
 bool desenha = false;
 
 float angulo=0.0;
 double AngleToRad = PI / 180;
+double RadToAngle = 180 / PI;
 double lastAlfa = 0.0;
 
 int nInstancias=0;
+
+int limiteTiro = 10;
+double damageTime = 0;
+bool animacaoDeDano = false;
+
+bool gameOver = false;
+double gameOverTime = 1.2;
+
+int navesDestruidas = 0;
+
 
 // **********************************************************************
 //    Calcula o produto escalar entre os vetores V1 e V2
@@ -150,9 +190,6 @@ bool HaInterseccao(Ponto k, Ponto l, Ponto m, Ponto n)
 bool DentroConvex(Ponto objeto[], Ponto objetoColisao[]) {
 
         Poligono vetores;
-       // cout << "tmn 1:"  << sizeof(objeto)/ sizeof(Ponto) << endl;
-       // cout << "tmn 2:"  << sizeof(objetoColisao)/ sizeof(objetoColisao[0]) << endl;
-        //Coloca os vetores do convexHull base no poligono vetores(A->B, B->C, C->D, D->A)
         for(int i = 0; i < 4; i++) {
             if(i == 4 - 1) {
 
@@ -164,8 +201,6 @@ bool DentroConvex(Ponto objeto[], Ponto objetoColisao[]) {
 
             Ponto vetor =   objeto[i+1] -  objeto[i];
             vetores.insereVertice(vetor);
-
-           // vetor.imprime(); cout <<  "--" << endl;
         }
 
         //Insere nos poligonos os pontos que estão fora ou dentro do convexHull base
@@ -177,8 +212,6 @@ bool DentroConvex(Ponto objeto[], Ponto objetoColisao[]) {
                 Ponto vetor = objetoColisao[i] - objeto[k];
                 Ponto result;
                 ProdVetorial(vetor, vetores.getVertice(k), result);
-                //cout << "Z: " << result.z << endl;
-
                 if(result.z > 0){
                     isInside = false;
                     break;
@@ -194,25 +227,6 @@ bool DentroConvex(Ponto objeto[], Ponto objetoColisao[]) {
         return false;
 }
 
-bool VerificaColisao(){
-    int n = 0;
-    for(int i=0; i< nInstancias;i++)
-    {
-        for(int j=n; j< nInstancias;j++)
-        {
-            if(j!=i){
-                //cout<< "Verifica " << i << " com " << j << endl;
-               // Universo[i].imprimeEnv();
-               // Universo[j].imprimeEnv();
-                if (DentroConvex(Universo[i].envelope, Universo[j].envelope)){
-                    return true;
-                }
-            }
-        }
-        n++;
-    }
-    return false;
-}
 
 bool VerificaColisaoInstancia(int instance){
     for(int i=0; i< nInstancias;i++){
@@ -244,6 +258,19 @@ Ponto movimentaPersonagem(Ponto p, double alfa){
     lastAlfa = alfa;
 
     return p + dir * PLAYERSPEED;
+}
+
+Ponto movimentaTiro(Ponto p, double alfa){
+
+    double radAlfa = alfa * AngleToRad;
+
+    Ponto dirT = Ponto (0,1);
+    double xr = dirT.x * cos(radAlfa) - dirT.y * sin(radAlfa);
+    double yr = dirT.x * sin(radAlfa) + dirT.y * cos(radAlfa);
+    dirT = Ponto (xr,yr);
+    lastAlfa = alfa;
+
+    return p + dirT * SHOTSPEED;
 }
 
 void LeObjeto(const char *nome, Poligono &p)
@@ -297,6 +324,8 @@ void LeObjeto(const char *nome, Poligono &p)
 
 }
 
+
+
 void CarregaModelos()
 {
     Disparador.LeModelo("Modelos/Player.txt");
@@ -308,11 +337,48 @@ void CarregaModelos()
     Enemy3.LeModelo("Modelos/Enemy3.txt");
     modelos.push_back(Enemy3);
 
+    hurtPlayer.LeModelo("Modelos/PlayerHurt.txt");
+    hurtEnemy1.LeModelo("Modelos/EnemyHurt1.txt");
+    hurtModelos.push_back(hurtEnemy1);
+    hurtEnemy2.LeModelo("Modelos/EnemyHurt2.txt");
+    hurtModelos.push_back(hurtEnemy2);
+    hurtEnemy3.LeModelo("Modelos/EnemyHurt3.txt");
+    hurtModelos.push_back(hurtEnemy3);
+
+    tiroInimigoBoom.LeModelo("Modelos/EnemyShotBOOM.txt");
+
     quantEnemyModels = modelos.size();
 
     Tiro.LeModelo("Modelos/PlayerShot.txt");
     TiroInimigo.LeModelo("Modelos/EnemyShot.txt");
     Vida.LeModelo("Modelos/PlayerHealth.txt");
+
+    GameOverModel.LeModelo("Modelos/GameOver.txt");
+    winModel.LeModelo("Modelos/Win.txt");
+}
+
+double fRand(double fMin, double fMax)
+{
+    double f = (double)rand() / RAND_MAX;
+    return fMin + f * (fMax - fMin);
+}
+
+float pegaAnguloInicial(Bezier curva, Ponto P){
+    Ponto Pd = curva.Calcula(0.1);
+    Ponto v1 = Ponto(0,1,0);
+    Ponto v2 = Pd - P;
+
+    double prodEscalar = ProdEscalar(v1,v2);
+    double tV1 = 1;
+    double tV2 = curva.calculaDistancia(Pd,P);
+
+    Ponto prodVet;
+    ProdVetorial(v1,v2,prodVet);
+    if( prodVet.z > 0 ){
+        return acos(prodEscalar/(tV1*tV2))* RadToAngle;
+    }
+
+    return -acos(prodEscalar/(tV1*tV2)) * RadToAngle;
 }
 
 // No trabalho, esta fun��o dever instanciar todos os
@@ -320,57 +386,232 @@ void CarregaModelos()
 void CarregaInstancias()
 {
     srand(time(NULL));
-
+    //Player
     Universo[0].posicao = Ponto (1,1);
-    Universo[0].rotacao = 0;
+    Universo[0].rotacao = 0.0;
     Universo[0].modelo = Disparador;
     Universo[0].speed = PLAYERSPEED;
+    Universo[0].ativo = true;
     Universo[0].DefineEnvelope();
 
     nInstancias = 1;
+    //Inimigos
     for(int i = 0; i < NAVESCOUNT; i++){
         int modeloRandom = rand() % quantEnemyModels;
 
-        int xRand = -50 + ( rand() % 101 );
-        int yRand = -50 + ( rand() % 101 );
+        int xRand = SIZE_X_MIN + ( rand() % (SIZE_X_MAX - SIZE_X_MIN + 1) );
+        int yRand = SIZE_Y_MIN + ( rand() % (SIZE_Y_MAX - SIZE_Y_MIN + 1) );
+
+        while(xRand < 15 && xRand > -15){
+                cout << "reposicionando X - Muito perto" << endl;
+                xRand = SIZE_X_MIN + ( rand() % SIZE_X_MAX - SIZE_X_MIN + 1 );
+            }
+            while(yRand < 15 && yRand > -15){
+                 cout << "reposicionando Y - Muito perto" << endl;
+                yRand = SIZE_Y_MIN + ( rand() % SIZE_Y_MAX - SIZE_Y_MIN + 1 );
+            }
+
         Universo[nInstancias].posicao = Ponto (xRand,yRand);
         Universo[nInstancias].rotacao = 0;
         Universo[nInstancias].modelo = modelos[modeloRandom];
+        double bulletTime = fRand(2.0, 5);
+        Universo[nInstancias].defaultBulletTime = bulletTime;
+        Universo[nInstancias].bulletTime = bulletTime;
+        Universo[nInstancias].damageModel = hurtModelos[modeloRandom];
         Universo[nInstancias].speed = ENEMYSPEED;
         Universo[nInstancias].DefineEnvelope();
 
+
         while(VerificaColisaoInstancia(nInstancias)){
-            int xRand = -50 + ( rand() % 101 );
-            int yRand = -50 + ( rand() % 101 );
+            int xRand = SIZE_X_MIN + ( rand() % SIZE_X_MAX - SIZE_X_MIN + 1 );
+            int yRand = SIZE_Y_MIN + ( rand() % SIZE_Y_MAX - SIZE_Y_MIN + 1 );
+           while(xRand < 40 && xRand > -40){
+                cout << "reposicionando X - Muito perto" << endl;
+                xRand = SIZE_X_MIN + ( rand() % SIZE_X_MAX - SIZE_X_MIN + 1 );
+            }
+            while(yRand < 40 && yRand > -40){
+                 cout << "reposicionando Y - Muito perto" << endl;
+                yRand = SIZE_Y_MIN + ( rand() % SIZE_Y_MAX - SIZE_Y_MIN + 1 );
+            }
             Universo[nInstancias].posicao = Ponto (xRand,yRand);
             Universo[nInstancias].DefineEnvelope();
             cout << "Colisao" << endl;
         }
 
-
         nInstancias ++;
     }
 
     for(int i = 0; i < NAVESCOUNT; i++){
-        int xRand = -50 + ( rand() % 101 );
-        int yRand = -50 + ( rand() % 101 );
+        int xRand = SIZE_X_MIN + ( rand() % SIZE_X_MAX - SIZE_X_MIN + 1 );
+        int yRand = SIZE_Y_MIN + ( rand() % SIZE_Y_MAX - SIZE_Y_MIN + 1 );
         Universo[i+1].bezier = Bezier(Universo[i+1].posicao,Universo[0].posicao,Ponto(xRand,yRand));
         Universo[i+1].turnSet = false;
         Universo[i+1].nCurva = 1;
+
+        Universo[i+1].rotacao = pegaAnguloInicial(Universo[i+1].bezier ,Universo[i+1].posicao);
+
     }
 
+    int px = SIZE_X_MIN + 3;
+    int py = SIZE_Y_MAX - 3;
+    int quantVidas = nInstancias + playerHealth;
+    positionHealth = nInstancias;
 
+    for(int i = nInstancias; i < quantVidas; i++){
+        Universo[i].posicao = Ponto(px,py);
+        px += 5;
+        Universo[i].modelo = Vida;
+        Universo[i].temColisao = false;
+        nInstancias ++;
+
+    }
+
+    positionShoot = nInstancias;
 }
 
+void instanciaTiro(int instancia, Modelo model, Modelo death, bool ally){
+
+    double alfa = Universo[instancia].rotacao;
+
+    double radAlfa = alfa * AngleToRad;
+
+    //dir.imprime();
+
+    Ponto dirT = Ponto (0,1);
+    double xr = dirT.x * cos(radAlfa) - dirT.y * sin(radAlfa);
+    double yr = dirT.x * sin(radAlfa) + dirT.y * cos(radAlfa);
+    dirT = Ponto (xr,yr);
+
+    //dir.imprime();
+
+    lastAlfa = alfa;
+
+    Universo[nInstancias].posicao =  Universo[instancia].posicao + dirT * (Universo[instancia].modelo.h/2 + 0.1);
+    Universo[nInstancias].modelo = model;
+    Universo[nInstancias].damageModel = death;
+    Universo[nInstancias].ally = ally;
+    Universo[nInstancias].rotacao = alfa;
+    Universo[nInstancias].DefineEnvelope();
+
+    nInstancias++;
+}
+
+void EnemyBulletTime(int instancia){
+    if(Universo[instancia].ativo){
+        Universo[instancia].bulletTime = Universo[instancia].defaultBulletTime;
+        instanciaTiro(instancia, TiroInimigo, tiroInimigoBoom, false);
+    }
+}
+
+void DecreaseBulletTime(){
+    for(int i = 1; i < NAVESCOUNT + 1; i++){
+        Universo[i].bulletTime -= ft;
+        if(Universo[i].bulletTime <= 0){
+            EnemyBulletTime(i);
+        }
+    }
+}
 
 void DesenhaCenario()
 {
     for(int i=0; i< nInstancias;i++)
     {
-        Universo[i].desenha();
+        if(Universo[i].ativo){
+            Universo[i].desenha();
+        }
+    }
+
+}
+
+void EnemyDeath(int instancia){
+    Universo[instancia].modelo = Universo[instancia].damageModel;
+    Universo[instancia].deathAnimation = true;
+    Universo[instancia].damageTime = HURT_ANIMATION_TIME;
+    Universo[instancia].temColisao = false;
+    if(Universo[instancia].ally ){
+        limiteTiro += 1;
+    }
+
+}
+
+void DestroyEnemy(int instancia){
+    Universo[instancia].ativo = false;
+}
+
+void DecreaseDamageTime(int instancia, double time){
+    Universo[instancia].damageTime -= time;
+
+    if(Universo[instancia].damageTime <= 0){
+        DestroyEnemy(instancia);
     }
 }
 
+void verificaMorte(){
+    for(int i = 1; i < nInstancias; i++){
+        if(Universo[i].deathAnimation){
+            DecreaseDamageTime(i, ft);
+        }
+    }
+}
+
+void GameOver(){
+    Universo[0].ativo = false;
+    Universo[0].temColisao = false;
+
+    Universo[nInstancias].temColisao = false;
+    Universo[nInstancias].posicao = Ponto(0,0);
+    Universo[nInstancias].modelo = GameOverModel;
+    Universo[nInstancias].temColisao = false;
+    nInstancias++;
+    cout << "Game Over!!!" << endl;
+}
+
+void Win(){
+    Universo[0].ativo = false;
+    Universo[0].temColisao = false;
+
+    Universo[nInstancias].temColisao = false;
+    Universo[nInstancias].posicao = Ponto(0,0);
+    Universo[nInstancias].modelo = winModel;
+    Universo[nInstancias].temColisao = false;
+    nInstancias++;
+}
+
+void criaAnimacao(){
+    Universo[0].modelo = hurtPlayer;
+}
+
+void animacaoReceberDano(){
+    if(damageTime <= 0){
+        damageTime = HURT_ANIMATION_TIME;
+        animacaoDeDano = true;
+        criaAnimacao();
+    }
+}
+
+
+void cancelaAnimacao(){
+    animacaoDeDano = false;
+    Universo[0].modelo = Disparador;
+}
+
+void receberDano(){
+    playerHealth--;
+    Universo[positionHealth+playerHealth].ativo = false;
+}
+
+
+void PerderVida(){
+    if(playerHealth == 1){
+        receberDano();
+        GameOver();
+        gameOver = true;
+    }
+    else{
+        receberDano();
+        animacaoReceberDano();
+    }
+}
 
 Ponto obtemVetorUnitario(Ponto p1, Ponto p2){
     Ponto vetContinuidade = p2 - p1;
@@ -378,24 +619,33 @@ Ponto obtemVetorUnitario(Ponto p1, Ponto p2){
     return vetContinuidade / moduloVet;
 }
 
-void AtualizarPersonagens(){
+float pegaAngulo(Bezier curva, double t , double dt, Ponto P){
+    if(dt == 0) dt = 0.1;
 
-    if(movePlayer==true){
-        Ponto novaPosicao = movimentaPersonagem(Universo[0].posicao, Universo[0].rotacao);
-        if(novaPosicao.x > 50) novaPosicao.x = 50;
-        if(novaPosicao.x < -50) novaPosicao.x = -50;
-        if(novaPosicao.y > 50) novaPosicao.y = 50;
-        if(novaPosicao.y <- 50) novaPosicao.y = -50;
+    Ponto Pd = curva.Calcula(t+dt);
+    Ponto v1 = Ponto(0,1,0);
+    Ponto v2 = Pd - P;
 
-        Universo[0].posicao = novaPosicao;
-        Universo[0].DefineEnvelope();
+    double prodEscalar = ProdEscalar(v1,v2);
+    double tV1 = 1;
+    double tV2 = curva.calculaDistancia(Pd,P);
+
+    Ponto prodVet;
+    ProdVetorial(v1,v2,prodVet);
+    if( prodVet.z > 0 ){
+        return acos(prodEscalar/(tV1*tV2)) * RadToAngle;
     }
 
+    return -acos(prodEscalar/(tV1*tV2)) *  RadToAngle;
+}
+
+void attInimigos(){
 
     Ponto P;
     for(int i = 0; i < NAVESCOUNT; i++){
-
-        Universo[i+1].tAtual += Universo[i+1].bezier.CalculaT(Universo[i+1].speed*ft);
+        if(Universo[i+1].ativo){
+            double dt =  Universo[i+1].bezier.CalculaT(Universo[i+1].speed*ft);
+        Universo[i+1].tAtual += dt;
 
         if(Universo[i+1].tAtual > 0.7 && Universo[i+1].turnSet==false && Universo[i+1].nCurva==1){
             Ponto vetUnitario = obtemVetorUnitario(Universo[i+1].bezier.Coords[1],Universo[i+1].bezier.Coords[2]);
@@ -431,11 +681,96 @@ void AtualizarPersonagens(){
             Universo[i+1].nCurva = 1;
         }
 
-
-
         P = Universo[i+1].bezier.Calcula(Universo[i+1].tAtual);
+        //float angle = pegaAngulo(Universo[i+1].bezier,Universo[i+1].tAtual,dt,P);
+        //Universo[i+1].rotacao += angle;
+        Universo[i+1].rotacao = pegaAngulo(Universo[i+1].bezier,Universo[i+1].tAtual,dt,P);
         Universo[i+1].posicao = P;
         Universo[i+1].DefineEnvelope();
+        }
+    }
+}
+
+void AtualizarPersonagens(){
+
+    if(movePlayer==true){
+        Ponto novaPosicao = movimentaPersonagem(Universo[0].posicao, Universo[0].rotacao);
+        if(novaPosicao.x > SIZE_X_MAX) novaPosicao.x = SIZE_X_MAX;
+        if(novaPosicao.x < SIZE_X_MIN) novaPosicao.x = SIZE_X_MIN;
+        if(novaPosicao.y > SIZE_Y_MAX) novaPosicao.y = SIZE_Y_MAX;
+        if(novaPosicao.y < SIZE_Y_MIN) novaPosicao.y = SIZE_Y_MIN;
+
+        Universo[0].posicao = novaPosicao;
+
+    }
+    Universo[0].DefineEnvelope();
+
+    attInimigos();
+
+    for(int i = positionShoot; i < nInstancias; i++){
+
+        if(Universo[i].temColisao){
+            Universo[i].posicao = movimentaTiro(Universo[i].posicao, Universo[i].rotacao);
+            Universo[i].DefineEnvelope();
+            if(Universo[i].posicao.x > SIZE_X_MAX + 10) EnemyDeath(i);
+            if(Universo[i].posicao.x < SIZE_X_MIN - 10) EnemyDeath(i);
+            if(Universo[i].posicao.y > SIZE_Y_MAX + 10) EnemyDeath(i);
+            if(Universo[i].posicao.y < SIZE_Y_MIN - 10) EnemyDeath(i);
+        }
+    }
+
+}
+
+void VerificaColisao(){
+    int n = 0;
+    for(int i=0; i< nInstancias;i++)
+    {
+        for(int j=n; j< nInstancias;j++)
+        {
+            if(j!=i && Universo[i].temColisao && Universo[j].temColisao){
+                //cout<< "Verifica " << i << " com " << j << endl;
+                // Universo[i].imprimeEnv();
+                // Universo[j].imprimeEnv();
+                if (DentroConvex(Universo[i].envelope, Universo[j].envelope)){
+                    if(i==0){
+                        PerderVida();
+                        EnemyDeath(j);
+                        if(j>0 && j<=NAVESCOUNT) navesDestruidas++;
+                    }
+                    else if(i>0 && i<=NAVESCOUNT){
+                        if(Universo[j].ally){
+                            EnemyDeath(i);
+                            EnemyDeath(j);
+                            navesDestruidas++;
+                        }
+                    }
+                }
+            }
+        }
+        n++;
+    }
+}
+
+void criaEstrelas(){
+    for(int i = 0; i<200;i++){
+        int xRand = SIZE_X_MIN + ( rand() % (SIZE_X_MAX - SIZE_X_MIN + 1) );
+        int yRand = SIZE_Y_MIN + ( rand() % (SIZE_Y_MAX - SIZE_Y_MIN + 1) );
+
+        Estrelas[i] = Ponto(xRand, yRand);
+    }
+}
+
+void desenhaEstrelas(){
+    for(int i = 0; i<200;i++){
+
+        glPushMatrix();
+            glColor3f(1.0f,1.0f,1.0f);
+            glPointSize(1.0f);
+            glBegin(GL_POINTS);
+                glVertex3f(Estrelas[i].x, Estrelas[i].y, 0.0f);
+            glEnd();
+        glPopMatrix();
+
     }
 
 }
@@ -456,10 +791,9 @@ void init()
 
     CarregaModelos();
     CarregaInstancias();
-    cout << "Vertices no Vetor: " << MeiaSeta.getNVertices() << endl;
     Min = Ponto(-50,-50);
     Max = Ponto(50,50);
-
+    criaEstrelas();
 }
 
 double nFrames=0;
@@ -476,7 +810,15 @@ void animate()
     nFrames++;
     ft = dt;
 
+    if(damageTime > 0 ){
+        damageTime -= ft;
+    }
+    else if(animacaoDeDano && damageTime <=0){
+        cancelaAnimacao();
+    }
 
+    verificaMorte();
+    DecreaseBulletTime();
     if (AccumDeltaT > 1.0/30) // fixa a atualiza��o da tela em 30
     {
         AccumDeltaT = 0;
@@ -614,13 +956,17 @@ void DesenhaPersonagem()  // modelo - veio de arquivo
 
 void DesenhaCurvas(){
     for(int i=0; i < NAVESCOUNT; i++){
-        Universo[i+1].bezier.Traca();
-        if(Universo[i+1].turnSet == true){
-            glColor3f(0, 1, 0);
-            Universo[i+1].bezierTurn.Traca();
+        if(Universo[i+1].temColisao){
+            Universo[i+1].bezier.Traca();
+            if(Universo[i+1].turnSet == true){
+                Universo[i+1].bezierTurn.Traca();
+            }
         }
+
     }
 }
+
+
 
 // **********************************************************************
 //  void display( void )
@@ -642,17 +988,40 @@ void display( void )
 
 	glLineWidth(1);
 	glColor3f(1,1,1); // R, G, B  [0..1]
-    DesenhaEixos();
+    //DesenhaEixos();
 
     glLineWidth(2);
 
     //DesenhaCatavento();
     AtualizarPersonagens();
+    VerificaColisao();
     if(DesenhaBezier){
+
         DesenhaCurvas();
     }
 
+    if(DesenhaEnvelope){
+       for(int i=0; i < nInstancias; i++){
+           if(Universo[i].temColisao)
+           Universo[i].DesenhaEnvelope();
+        }
+    }
+
     DesenhaCenario();
+
+    desenhaEstrelas();
+
+
+    if(navesDestruidas == NAVESCOUNT && !gameOver){
+        Win();
+        navesDestruidas++;
+    }
+    
+    if(gameOver){
+        gameOverTime -= ft;
+    }
+
+    if(gameOverTime <= 0) exit(0);
 
 	glutSwapBuffers();
 }
@@ -698,12 +1067,18 @@ void keyboard ( unsigned char key, int x, int y )
         case 'b':
             DesenhaBezier = !DesenhaBezier;
             break;
+        case 'v':
+            DesenhaEnvelope = !DesenhaEnvelope;
+            break;
         case 'f':
             glutFullScreen ( ); // Vai para Full Screen
 			break;
         case ' ':
-            desenha = !desenha;
-        break;
+            if(limiteTiro > 0 && !gameOver){
+                limiteTiro -= 1;
+                instanciaTiro(0,Tiro,tiroInimigoBoom, true);
+            }
+            break;
 		default:
 			break;
 	}
@@ -726,10 +1101,10 @@ void arrow_keys ( int a_keys, int x, int y )
 			//glutReshapeWindow ( 700, 700 );
 			break;
         case GLUT_KEY_LEFT:
-            Universo[0].rotacao += ROTACACAOSPEED;
+            Universo[0].rotacao += ROTACACAO_SPEED;
             break;
         case GLUT_KEY_RIGHT:
-            Universo[0].rotacao -= ROTACACAOSPEED;
+            Universo[0].rotacao -= ROTACACAO_SPEED;
             break;
 		default:
 			break;

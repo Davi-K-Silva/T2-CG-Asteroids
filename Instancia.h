@@ -20,6 +20,8 @@ class Instancia{
     //Poligono *modelo;
 
 public:
+    bool ativo = true;
+    bool temColisao = true;
     double speed;
     int nCurva;
     bool turnSet;
@@ -30,10 +32,19 @@ public:
     Ponto posicao, escala;
     float rotacao;
     Modelo modelo;
+    Modelo damageModel;
+    bool ally = false;
+    
+    double damageTime = 0;
+    bool deathAnimation = false;
+    double defaultBulletTime = 0;
+    double bulletTime = 5;
+
     void desenha();
     void ObtemPontos();
     void imprimeEnv();
     void DefineEnvelope();
+    void DesenhaEnvelope();
 };
 
 
