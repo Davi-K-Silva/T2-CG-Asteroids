@@ -184,8 +184,8 @@ bool HaInterseccao(Ponto k, Ponto l, Ponto m, Ponto n)
 // **********************************************************************
 
 // **********************************************************************
-// void DentroConvex(Poligono objeto, Poligono objetoColisao, Poligono &pontosOut, Poligono &pontosIn)
-//  Verifica se um conjunto de pontos está dentro de um poligon convexo usando o produto vetorial
+// void DentroConvex(Ponto objeto[], Ponto objetoColisao)
+//  Verifica se um conjunto de pontos está dentro de um poligono convexo usando o produto vetorial
 // **********************************************************************
 bool DentroConvex(Ponto objeto[], Ponto objetoColisao[]) {
 
@@ -227,6 +227,10 @@ bool DentroConvex(Ponto objeto[], Ponto objetoColisao[]) {
         return false;
 }
 
+// **********************************************************************
+// bool VerificaColisaoInstancia(int instance)
+//  Verifica se uma instancia especifica colide com as outras no Universo 
+// **********************************************************************
 
 bool VerificaColisaoInstancia(int instance){
     for(int i=0; i< nInstancias;i++){
@@ -242,6 +246,10 @@ bool VerificaColisaoInstancia(int instance){
     return false;
 }
 
+// **********************************************************************
+// Ponto movimentaPersonagem(Ponto p, double alfa)
+//  Retorna o próximo ponto do personagem de acordo com sua inclinação
+// **********************************************************************
 Ponto movimentaPersonagem(Ponto p, double alfa){
 
     double radAlfa = alfa * AngleToRad;
@@ -260,6 +268,10 @@ Ponto movimentaPersonagem(Ponto p, double alfa){
     return p + dir * PLAYERSPEED;
 }
 
+// **********************************************************************
+//  Ponto movimentaTiro(Ponto p, double alfa)
+//  Retorna o próximo ponto do Tiro de acordo com sua inclinação
+// **********************************************************************
 Ponto movimentaTiro(Ponto p, double alfa){
 
     double radAlfa = alfa * AngleToRad;
@@ -273,59 +285,11 @@ Ponto movimentaTiro(Ponto p, double alfa){
     return p + dirT * SHOTSPEED;
 }
 
-void LeObjeto(const char *nome, Poligono &p)
-{
-    ifstream input;
-    input.open(nome, ios::in);
-    if (!input)
-    {
-        cout << "Erro ao abrir " << nome << ". " << endl;
-        exit(0);
-    }
-    cout << "Lendo arquivo " << nome << "...";
-    string S;
-    int nLinha = 0;
-    unsigned int qtdVertices;
 
-    input >> qtdVertices;
-    double x,y;
-
-    // Le a primeira linha apenas para facilitar o calculo do limites
-    input >> x >> y;
-
-    Min = Ponto(x,y);
-    Max = Ponto(x,y);
-    p.insereVertice(Ponto(x,y));
-
-     cout << "Passou" << endl;
-    for (int i=0; i< qtdVertices; i++)
-    {
-        // Le cada elemento da linha
-        input >> x >> y;
-        // atualiza os limites
-        if (x<Min.x) Min.x = x;
-        if (y<Min.y) Min.y = y;
-
-        if (x>Max.x) Max.x = x;
-        if (y>Max.y) Max.y = y;
-
-        if(!input)
-            break;
-        nLinha++;
-        //cout << "Arquivo: " << x << " " << y << endl;
-        p.insereVertice(Ponto(x,y));
-    }
-    cout << "leitura concluida." << endl;
-    //cout << "Linhas lidas: " << nLinha << endl;
-    //cout << "Limites:" << endl;
-    cout << "Minimo:"; Min.imprime();
-    cout << "\tMaximo:"; Max.imprime();
-    cout << endl;
-
-}
-
-
-
+// **********************************************************************
+//  void carregaModelos()
+//  Carrega o modelo dos personagens para utilizar nas instancias
+// **********************************************************************
 void CarregaModelos()
 {
     Disparador.LeModelo("Modelos/Player.txt");
@@ -357,11 +321,20 @@ void CarregaModelos()
     winModel.LeModelo("Modelos/Win.txt");
 }
 
+// **********************************************************************
+//  double fRand(double fMin, double fMax)
+//  Carrega o modelo dos personagens para utilizar nas instancias
+// **********************************************************************
 double fRand(double fMin, double fMax)
 {
     double f = (double)rand() / RAND_MAX;
     return fMin + f * (fMax - fMin);
 }
+
+// **********************************************************************
+//  float pegaAnguloInicial(Bezier curva, Ponto P)
+//     retorna o angulo inicial dos personagens de acordo com sua curva de bezier
+// **********************************************************************
 
 float pegaAnguloInicial(Bezier curva, Ponto P){
     Ponto Pd = curva.Calcula(0.1);
@@ -381,8 +354,10 @@ float pegaAnguloInicial(Bezier curva, Ponto P){
     return -acos(prodEscalar/(tV1*tV2)) * RadToAngle;
 }
 
-// No trabalho, esta fun��o dever instanciar todos os
-// personagens do cen�rio
+// **********************************************************************
+//  CarregaInstancias()
+//     Carrega as instancias com os respectivos modelos no Universo
+// **********************************************************************
 void CarregaInstancias()
 {
     srand(time(NULL));
@@ -469,6 +444,11 @@ void CarregaInstancias()
     positionShoot = nInstancias;
 }
 
+
+// **********************************************************************
+//  void instanciaTiro(int instancia, Modelo model, Modelo death, bool ally)
+//     Instancia um tiro na frente de outra instancia com a inclinação correta
+// **********************************************************************
 void instanciaTiro(int instancia, Modelo model, Modelo death, bool ally){
 
     double alfa = Universo[instancia].rotacao;
@@ -496,6 +476,10 @@ void instanciaTiro(int instancia, Modelo model, Modelo death, bool ally){
     nInstancias++;
 }
 
+// **********************************************************************
+//  void EnemyBulletTime(int instancia)
+//    inicia o tempo de tiro dos inimigos
+// **********************************************************************
 void EnemyBulletTime(int instancia){
     if(Universo[instancia].ativo){
         Universo[instancia].bulletTime = Universo[instancia].defaultBulletTime;
@@ -503,6 +487,10 @@ void EnemyBulletTime(int instancia){
     }
 }
 
+// **********************************************************************
+//  void DecreaseBulletTime()
+//    Atualiza o tempo dos tiros
+// **********************************************************************
 void DecreaseBulletTime(){
     for(int i = 1; i < NAVESCOUNT + 1; i++){
         Universo[i].bulletTime -= ft;
@@ -512,6 +500,10 @@ void DecreaseBulletTime(){
     }
 }
 
+// **********************************************************************
+//  void DesenhaCenario()
+//    desenha todas as instancias do universo
+// **********************************************************************
 void DesenhaCenario()
 {
     for(int i=0; i< nInstancias;i++)
@@ -523,6 +515,10 @@ void DesenhaCenario()
 
 }
 
+// **********************************************************************
+//  void EnemyDeath(int instancia)
+//     Inicia a animação de morte de uma instancia e o tira do jogo
+// **********************************************************************
 void EnemyDeath(int instancia){
     Universo[instancia].modelo = Universo[instancia].damageModel;
     Universo[instancia].deathAnimation = true;
@@ -534,10 +530,18 @@ void EnemyDeath(int instancia){
 
 }
 
+// **********************************************************************
+//  void DestroyEnemy(int instancia)
+//    Desativo os desenhos de uma instancia
+// **********************************************************************
 void DestroyEnemy(int instancia){
     Universo[instancia].ativo = false;
 }
 
+// **********************************************************************
+//  void DecreaseDamageTime(int instancia, double time)
+//    Atualiza o tempo de animação de uma instancia
+// **********************************************************************
 void DecreaseDamageTime(int instancia, double time){
     Universo[instancia].damageTime -= time;
 
@@ -546,6 +550,10 @@ void DecreaseDamageTime(int instancia, double time){
     }
 }
 
+// **********************************************************************
+//  void verificaMorte()
+//    Verifica se alguma instancia está na animacao de morte e a atualiza
+// **********************************************************************
 void verificaMorte(){
     for(int i = 1; i < nInstancias; i++){
         if(Universo[i].deathAnimation){
@@ -554,6 +562,10 @@ void verificaMorte(){
     }
 }
 
+// **********************************************************************
+//  void GameOver()
+//    Faz as ações necessearias para o final do jogo em caso de derrota
+// **********************************************************************
 void GameOver(){
     Universo[0].ativo = false;
     Universo[0].temColisao = false;
@@ -566,6 +578,10 @@ void GameOver(){
     cout << "Game Over!!!" << endl;
 }
 
+// **********************************************************************
+// void Win()
+//    Faz as ações necessearias para o final do jogo em caso de vitoria
+// **********************************************************************
 void Win(){
     Universo[0].ativo = false;
     Universo[0].temColisao = false;
@@ -577,10 +593,18 @@ void Win(){
     nInstancias++;
 }
 
+// **********************************************************************
+// void criaAnimacao()
+//    troca o modelo para o modelo de dano do disparador
+// **********************************************************************
 void criaAnimacao(){
     Universo[0].modelo = hurtPlayer;
 }
 
+// **********************************************************************
+// void animacaoReceberDano()
+//    inicia as animações de dano
+// **********************************************************************
 void animacaoReceberDano(){
     if(damageTime <= 0){
         damageTime = HURT_ANIMATION_TIME;
@@ -589,18 +613,28 @@ void animacaoReceberDano(){
     }
 }
 
-
+// **********************************************************************
+// void animacaoReceberDano()
+//    volta o modelo do disparador ao normal após o dano
+// **********************************************************************
 void cancelaAnimacao(){
     animacaoDeDano = false;
     Universo[0].modelo = Disparador;
 }
 
+// **********************************************************************
+// void receberDano()
+//    diminui a vida e tira a instancia de vida da tela
+// **********************************************************************
 void receberDano(){
     playerHealth--;
     Universo[positionHealth+playerHealth].ativo = false;
 }
 
-
+// **********************************************************************
+// void PerderVida()
+//    Verifica se as vidas acabaram para encerrar o jogo
+// **********************************************************************
 void PerderVida(){
     if(playerHealth == 1){
         receberDano();
@@ -613,12 +647,20 @@ void PerderVida(){
     }
 }
 
+// **********************************************************************
+// Ponto obtemVetorUnitario(Ponto p1, Ponto p2)
+//    retorna o vetor unitário de um vetor composto de dois pontos
+// **********************************************************************
 Ponto obtemVetorUnitario(Ponto p1, Ponto p2){
     Ponto vetContinuidade = p2 - p1;
     double moduloVet = Universo[1].bezier.calculaDistancia(p1,p2);
     return vetContinuidade / moduloVet;
 }
 
+// **********************************************************************
+// loat pegaAngulo(Bezier curva, double t , double dt, Ponto P)
+//    retorna o angulo em relacao a curva de bezier para rotacionar os personagens
+// **********************************************************************
 float pegaAngulo(Bezier curva, double t , double dt, Ponto P){
     if(dt == 0) dt = 0.1;
 
@@ -639,6 +681,10 @@ float pegaAngulo(Bezier curva, double t , double dt, Ponto P){
     return -acos(prodEscalar/(tV1*tV2)) *  RadToAngle;
 }
 
+// **********************************************************************
+// void attInimigos()
+//   atualiza a posicao dos inimigos imendando as curvas de bezier 
+// **********************************************************************
 void attInimigos(){
 
     Ponto P;
@@ -691,6 +737,10 @@ void attInimigos(){
     }
 }
 
+// **********************************************************************
+// void AtualizarPersonagens()
+//   atualiza a posicao de todos os personagens (Disparador, inimgos, tiros)
+// **********************************************************************
 void AtualizarPersonagens(){
 
     if(movePlayer==true){
@@ -721,6 +771,10 @@ void AtualizarPersonagens(){
 
 }
 
+// **********************************************************************
+// void VerificaColisao()
+//   Verifica a colisão de todas as instancias com colisão
+// **********************************************************************
 void VerificaColisao(){
     int n = 0;
     for(int i=0; i< nInstancias;i++)
@@ -751,6 +805,10 @@ void VerificaColisao(){
     }
 }
 
+// **********************************************************************
+// void criaEstrelas()
+//   Gera as estrelas pelo mapa (estetico)
+// **********************************************************************
 void criaEstrelas(){
     for(int i = 0; i<200;i++){
         int xRand = SIZE_X_MIN + ( rand() % (SIZE_X_MAX - SIZE_X_MIN + 1) );
@@ -760,6 +818,10 @@ void criaEstrelas(){
     }
 }
 
+// **********************************************************************
+// void desenhaEstrelas()
+//   desenha as estrelas
+// **********************************************************************
 void desenhaEstrelas(){
     for(int i = 0; i<200;i++){
 
@@ -874,86 +936,6 @@ void DesenhaEixos()
     glEnd();
 }
 
-void DesenhaSeta()
-{
-    glPushMatrix();
-        //glScaled(2, 1, 1);
-        MeiaSeta.desenhaLinhas();
-        glScaled(1,-1, 1);
-        MeiaSeta.desenhaLinhas();
-    glPopMatrix();
-}
-void DesenhaApontador()
-{
-    glPushMatrix();
-        glTranslated(-4, 0, 0);
-        //glScalef(1.2,1,1);
-        DesenhaSeta();
-    glPopMatrix();
-}
-void DesenhaHelice()
-{
-    glPushMatrix();
-    for(int i=0;i < 4; i++)
-    {
-        glRotatef(90, 0, 0, 1);
-        DesenhaApontador();
-    }
-    glPopMatrix();
-}
-void DesenhaHelicesGirando()
-{
-    glPushMatrix();
-        glRotatef(angulo, 0, 0, 1);
-        DesenhaHelice();
-   glPopMatrix();
-}
-void DesenhaMastro()
-{
-    Mastro.desenhaPoligono();
-}
-void DesenhaCatavento()
-{
-    glPushMatrix();
-        glPushMatrix();
-            glColor3f(1,0,0); // R, G, B  [0..1]
-            glTranslated(0,3,0);
-            glScaled(0.2, 0.2, 1);
-            DesenhaHelicesGirando();
-        glPopMatrix();
-    glPopMatrix();
-}
-#define LARG
-void DesenhaRetangulo()
-{
-    glBegin(GL_QUADS);
-        glVertex2d(-1, -1);
-        glVertex2d(-1, 1);
-        glVertex2d(1, 1);
-        glVertex2d(1, -1);
-    glEnd();
-}
-void DesenhaPersonagem()  // modelo - veio de arquivo
-{
-    glPushMatrix();
-        glColor3f(1, 1, 1);
-        glTranslatef(-1, -1, 0);
-        DesenhaRetangulo();
-
-        glTranslatef(2, 0, 0);
-        glColor3f(1, 0, 0);
-        DesenhaRetangulo();
-
-        glTranslatef(0, 2, 0);
-        glColor3f(0, 0, 1);
-        DesenhaRetangulo();
-
-        glTranslatef(-2, 0, 0);
-        glColor3f(1, 1, 0);
-        DesenhaRetangulo();
-    glPopMatrix();
-}
-
 void DesenhaCurvas(){
     for(int i=0; i < NAVESCOUNT; i++){
         if(Universo[i+1].temColisao){
@@ -965,8 +947,6 @@ void DesenhaCurvas(){
 
     }
 }
-
-
 
 // **********************************************************************
 //  void display( void )
